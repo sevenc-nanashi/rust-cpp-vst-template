@@ -13,100 +13,24 @@ defaults:
   run:
     shell: bash
 
+env:
+  PLUGIN_NAME: "my-plugin"
+
 jobs:
-  build-editor:
-    runs-on: ubuntu-latest
-    outputs:
-      editor_sha: ${{ steps.emit-information.outputs.editor_sha }}
-    steps:
-      - name: Checkout Voicevox
-        uses: actions/checkout@v4
-        with:
-          repository: "sevenc-nanashi/voicevox"
-          ref: "add/vst"
-
-      - name: Checkout VVVST
-        uses: actions/checkout@v4
-        with:
-          path: vvvst
-
-      - name: Checkout Product Version Resource
-        uses: actions/checkout@v4
-        with:
-          repository: VOICEVOX/voicevox_resource
-          ref: "0.20.0"
-          path: resource
-
-      - name: Create and replace software resources
-        run: |
-          rm build/README.txt
-          rm public/policy.md
-          {
-            cat resource/editor/README.md
-            echo
-            cat resource/editor/ACKNOWLEDGMENTS.md
-          } \
-          > build/README.txt
-          cp build/README.txt public/policy.md
-          cat vvvst/resources/editor_ext/vstinfo.md >> public/policy.md
-          curl https://steinbergmedia.github.io/vst3_dev_portal/resources/licensing_6.png -o ./public/res/vst_logo.png
-
-          cp resource/editor/PRIVACYPOLICY.md public/privacyPolicy.md
-
-          cat ./vvvst/resources/editor_ext/howtouse.md ./public/howtouse.md > ./public/howtouse.md.tmp
-          mv ./public/howtouse.md.tmp ./public/howtouse.md
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .node-version
-          cache: "npm"
-
-      - name: Install dependencies
-        run: |
-          npm install
-
-      - name: Generate public/licenses.json
-        run: |
-          npm run license:generate -- -o editor_licenses.json
-          npm run license:merge -- -o public/licenses.json -i editor_licenses.json -i vvvst/resources/editor_ext/licenses.generated.json
-
-      - name: Build
-        run: |
-          npm run vst:build
-
-      - name: Upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-editor
-          path: dist/
-
-      - name: Emit information
-        id: emit-information
-        run: |
-          EDITOR_SHA=$(git rev-parse HEAD)
-          echo "editor_sha=$EDITOR_SHA" >> $GITHUB_OUTPUT
-
   build-each:
-    needs:
-      - build-editor
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-24.04]
+        os: [windows-latest]
         include:
           - os: windows-latest
             name: "windows"
-          - os: macos-latest
-            name: "macos"
-          - os: ubuntu-24.04
-            name: "linux"
     runs-on: ${{ matrix.os }}
     steps:
       - name: Colorize
         run: |
           echo "CLICOLOR_FORCE=1" >> $GITHUB_ENV
-      - name: Checkout VVVST
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: "recursive"
@@ -115,11 +39,6 @@ jobs:
 
       - name: Cache
         uses: Swatinem/rust-cache@v2
-      - name: Download Editor
-        uses: actions/download-artifact@v4
-        with:
-          name: build-editor
-          path: resources/editor
 
       - name: Determine Information
         id: determine-information
@@ -133,8 +52,8 @@ jobs:
             }
             core.setOutput('ref_name', version);
             core.setOutput('prerelease', version === "255.255.255" || version.includes("-"));
-            core.setOutput('zip_name', `VVVST-${version}-${{ matrix.name }}.vst3.zip`);
-            core.setOutput('au_name', `VVVST-${version}-${{ matrix.name }}.au.zip`);
+            core.setOutput('zip_name', `$PLUGIN_NAME-${version}-${{ matrix.name }}.vst3.zip`);
+            core.setOutput('au_name', `$PLUGIN_NAME-${version}-${{ matrix.name }}.au.zip`);
             require('fs').writeFileSync('version.txt', version);
 
       - name: Install dependencies (macOS)
@@ -151,9 +70,6 @@ jobs:
       - name: Install dependencies (Ubuntu)
         if: matrix.os == 'ubuntu-24.04'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libglib2.0-dev libgtk-3-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev libwebkit2gtk-4.1-dev libasound2-dev
-
           echo "CC=gcc-14" >> $GITHUB_ENV
           echo "CXX=g++-14" >> $GITHUB_ENV
 
@@ -164,22 +80,21 @@ jobs:
       - name: Package
         run: |
           cd build/release/bin/
-          7z a -tzip ${{ steps.determine-information.outputs.zip_name }} vvvst.vst3
+          7z a -tzip ${{ steps.determine-information.outputs.zip_name }} $PLUGIN_NAME.vst3
           cp ${{ steps.determine-information.outputs.zip_name }} ../../../
 
       - name: Package AU
         if: matrix.os == 'macos-latest'
         run: |
           cd build/release/bin/
-          7z a -tzip ${{ steps.determine-information.outputs.au_name }} vvvst.component
+          7z a -tzip ${{ steps.determine-information.outputs.au_name }} $PLUGIN_NAME.component
           cp ${{ steps.determine-information.outputs.au_name }} ../../../
 
       - name: Upload
         uses: softprops/action-gh-release@v2
         with:
           body: |
-            Rust SHA: ${{ github.sha }}
-            Editor SHA: https://github.com/sevenc-nanashi/voicevox/commit/${{ needs.build-editor.outputs.editor_sha }}
+            SHA: ${{ github.sha }}
           prerelease: ${{ steps.determine-information.outputs.prerelease }}
           files: |
             ${{ steps.determine-information.outputs.zip_name }}
@@ -196,4 +111,4 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.determine-information.outputs.ref_name }}
-          files: ./build/VVVST-*-windows-setup.exe
+          files: ./build/$PLUGIN_NAME-*-windows-setup.exe
