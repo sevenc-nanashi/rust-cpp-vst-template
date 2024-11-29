@@ -54,9 +54,6 @@ struct BuildArgs {
     /// logs内にVST内のログを出力するかどうか。
     #[clap(short, long)]
     log: Option<bool>,
-    /// 開発用サーバーのURL。デフォルトはhttp://localhost:5173。
-    #[clap(short, long)]
-    dev_server_url: Option<String>,
 }
 
 fn generate_header() {
@@ -79,19 +76,10 @@ fn build(args: BuildArgs) {
         if enable_log {
             panic!("Cannot enable logging in release mode");
         }
-        if args.dev_server_url.is_some() {
-            panic!("Cannot specify dev server URL in release mode");
-        }
     }
     let mut envs = std::env::vars().collect::<std::collections::HashMap<_, _>>();
     if enable_log {
         envs.insert("RUST_VST_LOG".to_string(), "1".to_string());
-    }
-    if let Some(ref dev_server_url) = args.dev_server_url {
-        envs.insert(
-            "RUST_VST_DEV_SERVER_URL".to_string(),
-            dev_server_url.clone(),
-        );
     }
 
     if colored::control::SHOULD_COLORIZE.should_colorize() {
@@ -99,13 +87,7 @@ fn build(args: BuildArgs) {
     }
 
     let build_name = if args.release { "release" } else { "debug" };
-    green_log!(
-        "Building",
-        "log: {}, dev_server_url: {:?}, release: {}",
-        enable_log,
-        args.dev_server_url,
-        args.release
-    );
+    green_log!("Building", "log: {}, release: {}", enable_log, args.release);
 
     let destination_path = main_crate.join("build").join(build_name);
 
