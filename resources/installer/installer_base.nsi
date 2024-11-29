@@ -7,18 +7,17 @@
 
 ;-------------------------------------------------------------------------------
 ; Constants
-!define PRODUCT_NAME "VVVST"
-!define PRODUCT_DESCRIPTION "VoicevoxのVSTプラグイン"
+!define PRODUCT_NAME "My Plugin"
+!define PRODUCT_DESCRIPTION "My VST Plugin"
 !define COPYRIGHT "Copyright (c) 2024 Nanashi."
-# !define COPYRIGHT "Copyright (c) 2024 Hiroshiba Kazuyuki"
 !define PRODUCT_VERSION "{version}.0"
 !define SETUP_VERSION "{version}.0"
 
 ;-------------------------------------------------------------------------------
 ; Attributes
-Name "VVVST"
-OutFile "build/VVVST-{version}-windows-setup.exe"
-InstallDir "$PROGRAMFILES64\Common Files\VST3\VVVST.vst3"
+Name "my_plugin"
+OutFile "build/my_plugin-{version}-windows-setup.exe"
+InstallDir "$PROGRAMFILES64\Common Files\VST3\my_plugin.vst3"
 RequestExecutionLevel admin ; user|highest|admin
 
 ;-------------------------------------------------------------------------------
@@ -32,7 +31,7 @@ VIAddVersionKey "FileVersion" "${SETUP_VERSION}"
 
 ;-------------------------------------------------------------------------------
 ; Modern UI Appearance
-!define MUI_ICON "resources\installer\VVVST.ico"
+!define MUI_ICON "resources\installer\my_plugin.ico"
 
 ;-------------------------------------------------------------------------------
 ; Installer Pages
@@ -55,17 +54,17 @@ VIAddVersionKey "FileVersion" "${SETUP_VERSION}"
 
 ;-------------------------------------------------------------------------------
 ; Installer Sections
-Section "VVVST" Vvvst
+Section "my_plugin" Vvvst
 	SetOutPath "$INSTDIR"
-  File "resources\installer\VVVST.ico"
+  File "resources\installer\my_plugin.ico"
   File "resources\installer\desktop.ini"
   File /r "build\release\bin\vvvst.vst3\"
   System::Call "shlwapi::PathMakeSystemFolder(t '$INSTDIR') i."
 
   WriteUninstaller "$INSTDIR\Uninstall.exe"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\VVVST" \
-                   "DisplayName" "VVVST"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\VVVST" \
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\my_plugin" \
+                   "DisplayName" "my_plugin"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\my_plugin" \
                    "UninstallString" "$\"$INSTDIR\uninstall.exe$\""
 SectionEnd
 
@@ -74,5 +73,5 @@ SectionEnd
 Section "Uninstall"
 	RMDir /r "$INSTDIR"
   Delete "$INSTDIR\Uninstall.exe"
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\VVVST"
+  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\my_plugin"
 SectionEnd
