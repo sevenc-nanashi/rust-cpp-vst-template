@@ -7,7 +7,7 @@
 #else
 #define DISTRHO_PLUGIN_NAME "My Plugin"
 #endif
-#define DISTRHO_PLUGIN_URI "https://github.com/sevenc-nanashi/rust-cpp-webview-vst-template/"
+#define DISTRHO_PLUGIN_URI "https://github.com/sevenc-nanashi/rust-cpp-vst-template/"
 
 // #define DISTRHO_PLUGIN_BRAND_ID Vcvx
 #define DISTRHO_PLUGIN_BRAND_ID ScNs
@@ -18,11 +18,10 @@
 #define DISTRHO_PLUGIN_UNIQUE_ID RCWV
 #endif
 
-// #define DISTRHO_PLUGIN_CLAP_ID "jp.hiroshiba.vvvst"
 #ifdef DEBUG
-#define DISTRHO_PLUGIN_CLAP_ID "com.sevenc-nanashi.rust-cpp-webview-vst-template-debug"
+#define DISTRHO_PLUGIN_CLAP_ID "com.sevenc-nanashi.rust-cpp-vst-template-debug"
 #else
-#define DISTRHO_PLUGIN_CLAP_ID "com.sevenc-nanashi.rust-cpp-webview-vst-template"
+#define DISTRHO_PLUGIN_CLAP_ID "com.sevenc-nanashi.rust-cpp-vst-template"
 #endif
 
 #define DISTRHO_PLUGIN_HAS_UI 1
