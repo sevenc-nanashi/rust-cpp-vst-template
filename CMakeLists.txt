@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.24)
 add_subdirectory(deps/corrosion)
 add_subdirectory(deps/dpf)
 
-set(NAME "my_plugin")
+set(NAME "my-plugin")
 
 project(${NAME})
 
