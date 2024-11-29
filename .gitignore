@@ -30,9 +30,6 @@ _deps
 /logs/*
 !/logs/.gitkeep
 
-/resources/editor/*
-!/resources/editor/.gitkeep
-/resources/dist
 installer.nsi
 
 ## macOS
