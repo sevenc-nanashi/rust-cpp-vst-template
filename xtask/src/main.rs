@@ -76,14 +76,6 @@ fn build(args: BuildArgs) {
 
     let enable_log = args.log.unwrap_or(!args.release);
     if args.release {
-        let editor_path = main_crate
-            .join("resources")
-            .join("editor")
-            .join("index.html");
-        if !editor_path.exists() {
-            panic!("Editor resources not found at {:?}", editor_path);
-        }
-
         if enable_log {
             panic!("Cannot enable logging in release mode");
         }
@@ -124,7 +116,7 @@ fn build(args: BuildArgs) {
         if args.release { "Release" } else { "Debug" }
     );
     let build_dir = format!("-B{}", &destination_path.to_string_lossy());
-    // なぜか_add_libraryが無限に再帰するので、vcpkgを無効化する。
+    // _add_library causes infinite recursion somehow, so disable vcpkg toolchain file
     // https://github.com/microsoft/vcpkg/issues/11307
     if cfg!(windows) {
         duct::cmd!(
