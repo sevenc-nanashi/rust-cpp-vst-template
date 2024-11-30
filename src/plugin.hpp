@@ -6,9 +6,9 @@
 
 START_NAMESPACE_DISTRHO
 
-class VvvstPlugin : public Plugin {
+class MyPlugin : public Plugin {
 public:
-  VvvstPlugin();
+  MyPlugin();
 
   std::shared_ptr<Rust::Plugin> inner;
 
@@ -65,11 +65,7 @@ protected:
   /* --------------------------------------------------------------------------------------------------------
    * Process */
 
-  /**
-     Run/process function for plugins without MIDI input.
-   */
-  void run(const float **inputs, float **outputs, uint32_t frames,
-           const MidiEvent *midiEvents, uint32_t midiEventCount) override;
+  void run(const float **inputs, float **outputs, uint32_t frames) override;
 
   // -------------------------------------------------------------------------------------------------------
 
@@ -77,7 +73,7 @@ private:
   /**
      Set our plugin class as non-copyable and add a leak detector just in case.
    */
-  DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(VvvstPlugin)
+  DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MyPlugin)
 };
 
 END_NAMESPACE_DISTRHO

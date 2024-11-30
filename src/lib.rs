@@ -1,5 +1,4 @@
 mod common;
-mod model;
 mod plugin;
 mod ui;
 

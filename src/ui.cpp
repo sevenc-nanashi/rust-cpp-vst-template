@@ -8,9 +8,9 @@ START_NAMESPACE_DISTRHO
 
 // -----------------------------------------------------------------------------------------------------------
 
-class VvvstUi : public UI {
+class MyPluginUi : public UI {
 public:
-  VvvstUi() : UI() { initializeRustUi(); }
+  MyPluginUi() : UI() { initializeRustUi(); }
   void parameterChanged(uint32_t index, float value) override {}
 
   void sizeChanged(uint width, uint height) override {
@@ -25,7 +25,8 @@ public:
         return;
       }
 
-      // Cubaseだとコンストラクト直後にRust側を初期化すると失敗することがあるので、1回だけリトライする
+      // Try to initialize the UI again; Cubase passes invalid hwnd on
+      // initialize
       initializeRustUi();
       uiRetried = true;
       return;
@@ -54,19 +55,14 @@ private:
   void initializeRustUi() {
     auto lock = std::unique_lock(this->mutex);
     if (inner) {
-        return;
+      return;
     }
-    auto plugin = static_cast<VvvstPlugin *>(this->getPluginInstancePointer());
+    auto plugin = static_cast<MyPlugin *>(this->getPluginInstancePointer());
     inner = std::shared_ptr<Rust::PluginUi>(
-        Rust::plugin_ui_new(
-            this->getParentWindowHandle(),
-            plugin->inner.get(),
-            this->getWidth(),
-            this->getHeight(),
-            this->getScaleFactor()
-        ),
-        [](Rust::PluginUi *inner) { Rust::plugin_ui_drop(inner); }
-    );
+        Rust::plugin_ui_new(this->getParentWindowHandle(), plugin->inner.get(),
+                            this->getWidth(), this->getHeight(),
+                            this->getScaleFactor()),
+        [](Rust::PluginUi *inner) { Rust::plugin_ui_drop(inner); });
     if (!inner) {
       return;
     }
@@ -75,13 +71,13 @@ private:
   /**
      Set our UI class as non-copyable and add a leak detector just in case.
    */
-  DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(VvvstUi)
+  DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MyPluginUi)
 };
 
 /* ------------------------------------------------------------------------------------------------------------
  * UI entry point, called by DPF to create a new UI instance. */
 
-UI *createUI() { return new VvvstUi(); }
+UI *createUI() { return new MyPluginUi(); }
 
 // -----------------------------------------------------------------------------------------------------------
 

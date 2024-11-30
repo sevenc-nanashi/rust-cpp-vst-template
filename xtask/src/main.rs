@@ -1,8 +1,6 @@
 use clap::{Parser, Subcommand};
 use colored::Colorize;
 use notify::Watcher;
-use serde::{Deserialize, Serialize};
-use std::hash::{Hash, Hasher};
 
 macro_rules! green_log {
     ($subject:expr, $($args:tt)+) => {
@@ -29,29 +27,29 @@ struct Args {
 
 #[derive(Subcommand, Debug)]
 enum SubCommands {
-    /// C++のヘッダーファイルを生成する。
+    /// Generate header file.
     #[command(version, about, long_about = None)]
     GenerateHeader,
 
-    /// プラグインをビルドする。
+    /// Build the project.
     #[command(version, about, long_about = None)]
     Build(BuildArgs),
 
-    /// Windows用のインストーラーを生成する。
+    /// Build Installer for Windows.
     #[command(version, about, long_about = None)]
     GenerateInstaller,
 
-    /// ログを確認する。
+    /// Watch logs.
     #[command(version, about, long_about = None)]
     WatchLog,
 }
 
 #[derive(Parser, Debug)]
 struct BuildArgs {
-    /// Releaseビルドを行うかどうか。
+    /// Whether to build in release mode.
     #[clap(short, long)]
     release: bool,
-    /// logs内にVST内のログを出力するかどうか。
+    /// Whether to enable logging.
     #[clap(short, long)]
     log: Option<bool>,
 }

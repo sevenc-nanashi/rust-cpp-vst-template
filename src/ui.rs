@@ -17,6 +17,9 @@ impl PluginUiImpl {
     pub unsafe fn new(
         handle: usize,
         plugin: Arc<Mutex<PluginImpl>>,
+        width: usize,
+        height: usize,
+        scale_factor: f64,
     ) -> Result<Self> {
         let raw_window_handle = if cfg!(target_os = "windows") {
             raw_window_handle::RawWindowHandle::Win32(raw_window_handle::Win32WindowHandle::new(

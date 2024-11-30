@@ -24,7 +24,7 @@ corrosion_import_crate(
   MANIFEST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/Cargo.toml
   PROFILE ${RUST_PROFILE}
   FEATURES static_link_windows
-  CRATES ${NAME})
+  CRATES ${NAME}-impl)
 
 # Windows：utf-8を使う
 if(MSVC)
@@ -38,6 +38,8 @@ dpf_add_plugin(
   FILES_DSP src/plugin.cpp
   FILES_UI src/ui.cpp)
 
-target_link_libraries(${PLUGIN_NAME} PRIVATE ${NAME})
+set(DLL_NAME ${NAME}-impl)
+string(REPLACE "-" "_" DLL_NAME ${DLL_NAME})
+target_link_libraries(${PLUGIN_NAME} PRIVATE ${DLL_NAME})
 target_include_directories(${PLUGIN_NAME} PUBLIC "src" "deps")
 target_compile_features(${PLUGIN_NAME} PUBLIC cxx_std_20)

@@ -9,13 +9,12 @@
 #endif
 #define DISTRHO_PLUGIN_URI "https://github.com/sevenc-nanashi/rust-cpp-vst-template/"
 
-// #define DISTRHO_PLUGIN_BRAND_ID Vcvx
 #define DISTRHO_PLUGIN_BRAND_ID ScNs
 
 #ifdef DEBUG
-#define DISTRHO_PLUGIN_UNIQUE_ID RCWV
+#define DISTRHO_PLUGIN_UNIQUE_ID RCVT
 #else
-#define DISTRHO_PLUGIN_UNIQUE_ID RCWV
+#define DISTRHO_PLUGIN_UNIQUE_ID RCVD
 #endif
 
 #ifdef DEBUG
