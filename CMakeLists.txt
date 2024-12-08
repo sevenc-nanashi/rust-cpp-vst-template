@@ -23,7 +23,7 @@ endif()
 corrosion_import_crate(
   MANIFEST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/Cargo.toml
   PROFILE ${RUST_PROFILE}
-  FEATURES static_link_windows
+  FEATURES static_link
   CRATES ${NAME}-impl)
 
 # Windows：utf-8を使う
@@ -36,10 +36,15 @@ dpf_add_plugin(
   TARGETS vst3
   UI_TYPE external
   FILES_DSP src/plugin.cpp
-  FILES_UI src/ui.cpp)
+  FILES_UI src/ui.cpp
+  FILES_COMMON
+    src/rust_bridge.cpp src/rust_bridge.generated.cpp
+    deps/whereami-cpp/source/whereami++.cpp deps/whereami/src/whereami.c)
 
 set(DLL_NAME ${NAME}-impl)
 string(REPLACE "-" "_" DLL_NAME ${DLL_NAME})
-target_link_libraries(${PLUGIN_NAME} PRIVATE ${DLL_NAME})
-target_include_directories(${PLUGIN_NAME} PUBLIC "src" "deps")
+target_link_libraries(${PLUGIN_NAME} PUBLIC ${DLL_NAME})
+target_include_directories(
+  ${PLUGIN_NAME} PUBLIC "src" "deps" "deps/whereami-cpp/include"
+                        "deps/whereami/src")
 target_compile_features(${PLUGIN_NAME} PUBLIC cxx_std_20)

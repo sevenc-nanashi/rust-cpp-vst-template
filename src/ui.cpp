@@ -1,6 +1,6 @@
 #include "DistrhoUI.hpp"
 #include "plugin.hpp"
-#include "rust.generated.hpp"
+#include "rust_bridge.generated.hpp"
 #include <memory>
 #include <mutex>
 

@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand};
 use colored::Colorize;
 use notify::Watcher;
+use std::io::Write;
 
 macro_rules! green_log {
     ($subject:expr, $($args:tt)+) => {
@@ -27,9 +28,9 @@ struct Args {
 
 #[derive(Subcommand, Debug)]
 enum SubCommands {
-    /// Generate header file.
+    /// Generate bridge files.
     #[command(version, about, long_about = None)]
-    GenerateHeader,
+    GenerateBridge,
 
     /// Build the project.
     #[command(version, about, long_about = None)]
@@ -54,15 +55,115 @@ struct BuildArgs {
     log: Option<bool>,
 }
 
-fn generate_header() {
+fn print_cmd(process: &std::process::Command) -> std::io::Result<()> {
+    blue_log!("Running", "{:?}", process);
+    Ok(())
+}
+
+fn generate_bridge() {
+    blue_log!("Running", "cbindgen");
     let main_crate = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap();
     let bindings = cbindgen::generate(&main_crate).unwrap();
-    let destination_path = main_crate.join("src/rust.generated.hpp");
-    bindings.write_to_file(&destination_path);
+    let mut cbindgen_binding = vec![];
+    bindings.write(&mut cbindgen_binding);
 
-    green_log!("Finished", "generated to {:?}", destination_path,);
+    blue_log!("Generating", "rust_bridge.generated.hpp");
+    let contents = std::str::from_utf8(&cbindgen_binding).unwrap();
+    let re = lazy_regex::regex!(
+        r#"EXPORT\s+(?<returns>[\w ]+\s+\*?)(?<name>\w+)\s*\((?<args>[^)]*)\);"#
+    );
+    let mut functions = vec![];
+    for cap in re.captures_iter(&contents) {
+        let returns = cap.name("returns").unwrap().as_str();
+        let name = cap.name("name").unwrap().as_str();
+        let args = cap.name("args").unwrap().as_str();
+        let args = args
+            .split(',')
+            .map(|arg| {
+                let arg = arg.trim();
+                arg.split_whitespace()
+                    .filter(|arg| !arg.is_empty())
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            })
+            .collect::<Vec<_>>();
+        functions.push((returns, name, args));
+    }
+
+    let types = contents
+        .lines()
+        .skip_while(|line| !line.contains("namespace Rust {"))
+        .skip(1)
+        .take_while(|line| !line.contains("extern \"C\" {"))
+        .collect::<Vec<_>>();
+    let types = types.join("\n");
+    assert!(!types.is_empty());
+
+    let bridge_header_path = main_crate.join("src/rust_bridge.generated.hpp");
+    let mut file = std::fs::File::create(&bridge_header_path).unwrap();
+    writeln!(file, "#pragma once").unwrap();
+    writeln!(file, "#include <choc/platform/choc_DynamicLibrary.h>").unwrap();
+    writeln!(file).unwrap();
+    writeln!(file, "namespace Rust {{").unwrap();
+    writeln!(file, "{}", types).unwrap();
+    writeln!(file, "    choc::file::DynamicLibrary* loadRustDll();").unwrap();
+    for (returns, name, args) in &functions {
+        let args = args.join(", ");
+        writeln!(file, "    {} {}({});", returns, name, args).unwrap();
+        writeln!(file).unwrap();
+    }
+    writeln!(file, "}}").unwrap();
+
+    blue_log!("Generating", "rust_bridge.generated.cpp");
+    let bridge_path = main_crate.join("src/rust_bridge.generated.cpp");
+    let mut file = std::fs::File::create(&bridge_path).unwrap();
+    writeln!(file, "#include \"rust_bridge.generated.hpp\"").unwrap();
+    writeln!(file).unwrap();
+    writeln!(file, "namespace Rust {{").unwrap();
+    for (returns, name, args) in &functions {
+        let args = args.join(", ");
+        writeln!(file, "    typedef {} (*{}_t)({});", returns, name, args).unwrap();
+        writeln!(file, "    {} {}({}) {{", returns, name, args).unwrap();
+        writeln!(file, "        auto rust = Rust::loadRustDll();").unwrap();
+        writeln!(
+            file,
+            "        auto fn = ({}_t)rust->findFunction(\"{}\");",
+            name, name
+        )
+        .unwrap();
+
+        let args_regex = lazy_regex::regex!(r"(?P<name>\w+)(?:,|$)");
+        let mut arg_names = vec![];
+        for cap in args_regex.captures_iter(&args) {
+            let name = cap.name("name").unwrap().as_str();
+            arg_names.push(name);
+        }
+        let arg_names = arg_names.join(", ");
+
+        if *returns != "void" {
+            writeln!(file, "        return fn({});", arg_names).unwrap();
+        } else {
+            writeln!(file, "        fn({});", arg_names).unwrap();
+        }
+        writeln!(file, "    }}").unwrap();
+        writeln!(file).unwrap();
+    }
+    writeln!(file, "}}").unwrap();
+
+    duct::cmd!("clang-format", "-i", &bridge_header_path)
+        .before_spawn(|command| print_cmd(command))
+        .run()
+        .unwrap();
+    duct::cmd!("clang-format", "-i", &bridge_path)
+        .before_spawn(|command| print_cmd(command))
+        .run()
+        .unwrap();
+
+    green_log!("Finished", "generated to:");
+    green_log!("", "- {:?}", bridge_header_path);
+    green_log!("", "- {:?}", bridge_path);
 }
 fn build(args: BuildArgs) {
     let main_crate = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -108,24 +209,37 @@ fn build(args: BuildArgs) {
     } else {
         duct::cmd!("cmake", &build_type, &build_dir)
     }
-    .before_spawn(|command| {
-        blue_log!("Running", "{:?}", command);
-
-        Ok(())
-    })
+    .before_spawn(|command| print_cmd(command))
     .dir(main_crate)
     .run()
     .unwrap();
     duct::cmd!("cmake", "--build", &destination_path)
         .dir(main_crate)
-        .before_spawn(|command| {
-            blue_log!("Running", "{:?}", command);
-
-            Ok(())
-        })
+        .before_spawn(|command| print_cmd(command))
         .full_env(envs)
         .run()
         .unwrap();
+
+    // TODO: Do this in cmake as cmake knows more about the build
+    blue_log!("Copying", "plugin dll to bin");
+    let plugin_name = if cfg!(target_os = "windows") {
+        "my_plugin_impl.dll"
+    } else if cfg!(target_os = "macos") {
+        "libmy_plugin_impl.dylib"
+    } else if cfg!(target_os = "linux") {
+        "libmy_plugin_impl.so"
+    } else {
+        panic!("Unsupported platform");
+    };
+    let plugin_path = destination_path.join(plugin_name);
+    let vst_root = destination_path.join("bin");
+    let vst_path = glob::glob(&format!("{}/*/**/*.vst3", vst_root.to_string_lossy()))
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap();
+    let vst_path = vst_path.parent().unwrap();
+    std::fs::copy(&plugin_path, vst_path.join(plugin_name)).unwrap();
 
     let elapsed = current.elapsed();
     green_log!(
@@ -135,7 +249,7 @@ fn build(args: BuildArgs) {
         elapsed.subsec_millis()
     );
     green_log!("", "destination: {:?}", &destination_path);
-    green_log!("", "plugin: {:?}", destination_path.join("bin"),);
+    green_log!("", "plugin: {:?}", destination_path.join("bin"));
     if enable_log {
         green_log!("", "logs: {:?}", main_crate.join("logs"));
     }
@@ -168,11 +282,7 @@ fn generate_installer() {
 
     duct::cmd!("makensis", &installer_dist, "/INPUTCHARSET", "UTF8")
         .dir(main_crate)
-        .before_spawn(|command| {
-            blue_log!("Running", "{:?}", command);
-
-            Ok(())
-        })
+        .before_spawn(|command| print_cmd(command))
         .run()
         .unwrap();
     green_log!(
@@ -273,8 +383,8 @@ fn main() {
     let args = Args::parse();
 
     match args.subcommand {
-        SubCommands::GenerateHeader => {
-            generate_header();
+        SubCommands::GenerateBridge => {
+            generate_bridge();
         }
         SubCommands::Build(build_args) => {
             build(build_args);

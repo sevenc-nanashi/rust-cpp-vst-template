@@ -1,7 +1,8 @@
+
 #include "plugin.hpp"
-#include "DistrhoDetails.hpp"
-#include "DistrhoPlugin.hpp"
-#include "rust.generated.hpp"
+#include "rust_bridge.generated.hpp"
+#include <DistrhoDetails.hpp>
+#include <DistrhoPlugin.hpp>
 #include <format>
 #include <string>
 // -----------------------------------------------------------------------------------------------------------
